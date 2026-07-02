@@ -1,77 +1,13 @@
-// ═══════════════════════════════════════════════════════════════════
-// KHABAR ISLAMABAD — Database Schema
-// Prisma ORM with PostgreSQL
-// ═══════════════════════════════════════════════════════════════════
+// KHABAR ISLAMABAD — Database Schema (SQLite for development)
 
 generator client {
   provider = "prisma-client-js"
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
-
-// ── Enums ────────────────────────────────────────────────────────
-
-enum UserRole {
-  SUPER_ADMIN
-  EDITOR_IN_CHIEF
-  MANAGING_EDITOR
-  EDITOR
-  REPORTER
-  JOURNALIST
-  GUEST_AUTHOR
-  PHOTOGRAPHER
-  VIDEO_EDITOR
-  AD_MANAGER
-  MODERATOR
-}
-
-enum ArticleStatus {
-  DRAFT
-  REVIEW
-  APPROVED
-  SCHEDULED
-  PUBLISHED
-  ARCHIVED
-}
-
-enum Province {
-  FEDERAL
-  PUNJAB
-  SINDH
-  KPK
-  BALOCHISTAN
-  AJK
-  GB
-}
-
-enum MediaType {
-  IMAGE
-  VIDEO
-  AUDIO
-  DOCUMENT
-}
-
-enum AdSlotType {
-  TOP_BANNER
-  HERO
-  SIDEBAR
-  BETWEEN_PARAGRAPHS
-  STICKY_FOOTER
-  NATIVE
-  POPUP
-  VIDEO
-}
-
-enum DeviceType {
-  ALL
-  DESKTOP
-  MOBILE
-}
-
-// ── Models ───────────────────────────────────────────────────────
 
 model User {
   id                String    @id @default(uuid())
@@ -79,7 +15,7 @@ model User {
   email             String    @unique
   password          String?
   image             String?
-  role              UserRole  @default(GUEST_AUTHOR)
+  role              String    @default("GUEST_AUTHOR")
   twoFactorEnabled  Boolean   @default(false)
   twoFactorSecret   String?
   isActive          Boolean   @default(true)
@@ -87,7 +23,6 @@ model User {
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
 
-  // Relations
   articles          Article[] @relation("AuthorArticles")
   editedArticles    Article[] @relation("EditorArticles")
   comments          Comment[]
@@ -97,51 +32,49 @@ model User {
 
   @@index([email])
   @@index([role])
-  @@map("users")
 }
 
 model Article {
-  id                String        @id @default(uuid())
+  id                String    @id @default(uuid())
   title             String
   titleUr           String?
   titleEs           String?
   titleAr           String?
-  slug              String        @unique
+  slug              String    @unique
   subtitle          String?
-  contentJson       Json          @default("{}")
-  contentHtml       String        @default("")
+  contentJson       String    @default("{}")
+  contentHtml       String    @default("")
   contentUr         String?
   contentEs         String?
   contentAr         String?
   heroImageUrl      String?
   heroImageAlt      String?
   heroImageCaption  String?
-  status            ArticleStatus @default(DRAFT)
+  status            String    @default("DRAFT")
   location          String?
-  province          Province?
-  readingTimeMinutes Int          @default(3)
-  viewCount         Int           @default(0)
-  shareCount        Int           @default(0)
-  isFeatured        Boolean       @default(false)
-  isBreaking        Boolean       @default(false)
+  province          String?
+  readingTimeMinutes Int      @default(3)
+  viewCount         Int       @default(0)
+  shareCount        Int       @default(0)
+  isFeatured        Boolean   @default(false)
+  isBreaking        Boolean   @default(false)
   aiSummary         String?
   aiSummaryUr       String?
-  aiKeyTakeaways    Json?
-  aiFaq             Json?
+  aiKeyTakeaways    String?
+  aiFaq             String?
   metaTitle         String?
   metaDescription   String?
-  keywords          String[]
+  keywords          String    @default("")
   publishedAt       DateTime?
   scheduledAt       DateTime?
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-  // Relations
-  author            User          @relation("AuthorArticles", fields: [authorId], references: [id])
+  author            User      @relation("AuthorArticles", fields: [authorId], references: [id])
   authorId          String
-  editor            User?         @relation("EditorArticles", fields: [editorId], references: [id])
+  editor            User?     @relation("EditorArticles", fields: [editorId], references: [id])
   editorId          String?
-  category          Category      @relation(fields: [categoryId], references: [id])
+  category          Category  @relation(fields: [categoryId], references: [id])
   categoryId        String
   tags              ArticleTag[]
   comments          Comment[]
@@ -150,12 +83,11 @@ model Article {
 
   @@index([slug])
   @@index([status])
-  @@index([publishedAt(sort: Desc)])
+  @@index([publishedAt])
   @@index([categoryId])
   @@index([authorId])
   @@index([isFeatured])
   @@index([isBreaking])
-  @@map("articles")
 }
 
 model Category {
@@ -175,19 +107,17 @@ model Category {
 
   @@index([slug])
   @@index([sortOrder])
-  @@map("categories")
 }
 
 model Tag {
-  id     String       @id @default(uuid())
-  name   String       @unique
+  id     String  @id @default(uuid())
+  name   String  @unique
   nameUr String?
-  slug   String       @unique
+  slug   String  @unique
 
   articles ArticleTag[]
 
   @@index([slug])
-  @@map("tags")
 }
 
 model ArticleTag {
@@ -198,14 +128,13 @@ model ArticleTag {
   tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([articleId, tagId])
-  @@map("article_tags")
 }
 
 model Media {
-  id           String      @id @default(uuid())
+  id           String   @id @default(uuid())
   url          String
   thumbnailUrl String?
-  type         MediaType   @default(IMAGE)
+  type         String   @default("IMAGE")
   altText      String?
   caption      String?
   fileName     String?
@@ -214,35 +143,33 @@ model Media {
   height       Int?
   sizeBytes    Int?
   uploadedById String
-  createdAt    DateTime    @default(now())
+  createdAt    DateTime @default(now())
 
-  uploadedBy   User        @relation(fields: [uploadedById], references: [id])
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
 
   @@index([type])
   @@index([uploadedById])
-  @@map("media")
 }
 
 model Advertisement {
-  id                 String      @id @default(uuid())
+  id                 String    @id @default(uuid())
   name               String
-  slotType           AdSlotType
+  slotType           String
   imageUrl           String
   targetUrl          String
-  device             DeviceType  @default(ALL)
+  device             String    @default("ALL")
   startsAt           DateTime?
   expiresAt          DateTime?
-  isActive           Boolean     @default(true)
-  isPaused           Boolean     @default(false)
-  views              Int         @default(0)
-  clicks             Int         @default(0)
-  assignedCategories Json?
-  createdAt          DateTime    @default(now())
-  updatedAt          DateTime    @updatedAt
+  isActive           Boolean   @default(true)
+  isPaused           Boolean   @default(false)
+  views              Int       @default(0)
+  clicks             Int       @default(0)
+  assignedCategories String?
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
 
   @@index([slotType])
   @@index([isActive])
-  @@map("advertisements")
 }
 
 model Comment {
@@ -261,21 +188,19 @@ model Comment {
 
   @@index([articleId])
   @@index([userId])
-  @@map("comments")
 }
 
 model Revision {
-  id         String   @id @default(uuid())
-  articleId  String
-  authorId   String
-  snapshotJson Json
-  savedAt    DateTime @default(now())
+  id          String   @id @default(uuid())
+  articleId   String
+  authorId    String
+  snapshotJson String
+  savedAt     DateTime @default(now())
 
-  article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
-  author     User     @relation(fields: [authorId], references: [id])
+  article     Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  author      User     @relation(fields: [authorId], references: [id])
 
   @@index([articleId])
-  @@map("revisions")
 }
 
 model Bookmark {
@@ -287,15 +212,13 @@ model Bookmark {
   article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
 
   @@id([userId, articleId])
-  @@map("bookmarks")
 }
 
 model NewsletterSubscriber {
-  id          String   @id @default(uuid())
-  email       String   @unique
-  isActive    Boolean  @default(true)
+  id           String   @id @default(uuid())
+  email        String   @unique
+  isActive     Boolean  @default(true)
   subscribedAt DateTime @default(now())
 
   @@index([email])
-  @@map("newsletter_subscribers")
 }

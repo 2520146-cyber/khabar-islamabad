@@ -1,9 +1,4 @@
-// ═══════════════════════════════════════════════════════════════════
-// KHABAR ISLAMABAD — Database Seed
-// Run: npx ts-node --compiler-options '{"module":"commonjs"}' prisma/seed.ts
-// ═══════════════════════════════════════════════════════════════════
-
-import { PrismaClient, UserRole, ArticleStatus } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 
 const prisma = new PrismaClient();
@@ -11,7 +6,7 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding database...');
 
-  // ── Categories ───────────────────────────────────────────────────
+  // Categories
   const categoryData = [
     { name: 'Pakistan', nameUr: 'پاکستان', slug: 'pakistan', color: '#C0161D', sortOrder: 1 },
     { name: 'Politics', nameUr: 'سیاست', slug: 'politics', color: '#1E40AF', sortOrder: 2 },
@@ -34,7 +29,7 @@ async function main() {
     console.log(`  ✅ Category: ${cat.name}`);
   }
 
-  // ── Super Admin User ────────────────────────────────────────────
+  // Super Admin
   const hashedPassword = await bcrypt.hash('admin123', 12);
 
   const adminUser = await prisma.user.upsert({
@@ -44,13 +39,13 @@ async function main() {
       name: 'Abdullah Ashfaq Raja',
       email: 'admin@khabar.pk',
       password: hashedPassword,
-      role: UserRole.SUPER_ADMIN,
+      role: 'SUPER_ADMIN',
       isActive: true,
     },
   });
-  console.log(`  ✅ Admin user: ${adminUser.email}`);
+  console.log(`  ✅ Admin: ${adminUser.email}`);
 
-  // ── Sample Reporter ─────────────────────────────────────────────
+  // Reporter
   const reporterPassword = await bcrypt.hash('reporter123', 12);
 
   const reporter = await prisma.user.upsert({
@@ -60,40 +55,37 @@ async function main() {
       name: 'Fatima Khan',
       email: 'reporter@khabar.pk',
       password: reporterPassword,
-      role: UserRole.REPORTER,
+      role: 'REPORTER',
       isActive: true,
     },
   });
   console.log(`  ✅ Reporter: ${reporter.email}`);
 
-  // ── Sample Articles ─────────────────────────────────────────────
+  // Articles
   const articlesData = [
     {
       title: 'Islamabad Metro Bus Expansion Approved for 2026',
       subtitle: 'New routes will connect Rawalpindi to the airport, serving over 200,000 daily commuters',
       slug: 'islamabad-metro-bus-expansion-2026',
-      contentHtml:
-        '<p>The federal government has approved a major expansion of the Islamabad Metro Bus service, with three new routes set to be operational by December 2026. The project, valued at Rs 45 billion, will significantly improve public transportation in the twin cities.</p><p>The new routes will connect Rawalpindi\'s Saddar area to Islamabad International Airport, with stops at key locations including Faizabad, Zero Point, and Blue Area. Officials estimate the expanded network will serve over 200,000 daily commuters.</p><p>"This is a landmark decision for the residents of Islamabad and Rawalpindi," said Federal Minister for Communications. "The expansion will reduce traffic congestion on major arteries and provide affordable transportation to thousands of workers."</p>',
+      contentHtml: '<p>The federal government has approved a major expansion of the Islamabad Metro Bus service, with three new routes set to be operational by December 2026.</p><p>The new routes will connect Rawalpindi\'s Saddar area to Islamabad International Airport. Officials estimate the expanded network will serve over 200,000 daily commuters.</p><p>"This is a landmark decision for the residents of Islamabad and Rawalpindi," said Federal Minister for Communications.</p>',
       categorySlug: 'pakistan',
       isBreaking: true,
       isFeatured: true,
     },
     {
-      title: 'Pakistan Stock Exchange Crosses 80,000 Mark for First Time',
+      title: 'Pakistan Stock Exchange Crosses 80,000 Mark',
       subtitle: 'Investor confidence surges as economic reforms take effect',
       slug: 'pakistan-stock-exchange-80000',
-      contentHtml:
-        '<p>The Pakistan Stock Exchange (PSX) crossed the historic 80,000 mark on Tuesday, marking a significant milestone in the country\'s economic recovery. The benchmark KSE-100 index gained 1,245 points to close at 80,127.</p><p>Analysts attribute the surge to improved macroeconomic indicators, including declining inflation, stable exchange rates, and growing foreign investment.</p>',
+      contentHtml: '<p>The Pakistan Stock Exchange crossed the historic 80,000 mark on Tuesday, marking a significant milestone in the country\'s economic recovery.</p><p>Analysts attribute the surge to improved macroeconomic indicators, including declining inflation and stable exchange rates.</p>',
       categorySlug: 'business',
       isBreaking: false,
       isFeatured: false,
     },
     {
       title: 'Cricket World Cup 2026: Pakistan Squad Announced',
-      subtitle: 'Babar Azam to lead the 15-member squad in the upcoming tournament',
+      subtitle: 'Babar Azam to lead the 15-member squad',
       slug: 'cricket-world-cup-2026-pakistan-squad',
-      contentHtml:
-        '<p>The Pakistan Cricket Board (PCB) has announced the 15-member squad for the upcoming ICC Cricket World Cup 2026. Babar Azam will continue as captain, with Shaheen Afridi leading the bowling attack.</p><p>The squad includes several exciting young talents alongside experienced campaigners.</p>',
+      contentHtml: '<p>The PCB has announced the 15-member squad for the ICC Cricket World Cup 2026. Babar Azam will continue as captain.</p><p>The squad includes several exciting young talents alongside experienced campaigners.</p>',
       categorySlug: 'sports',
       isBreaking: false,
       isFeatured: false,
@@ -107,9 +99,10 @@ async function main() {
       update: {},
       create: {
         ...rest,
-        status: ArticleStatus.PUBLISHED,
+        status: 'PUBLISHED',
         publishedAt: new Date(),
-        contentJson: { blocks: [{ id: '1', type: 'paragraph', content: '' }] },
+        contentJson: '{}',
+        keywords: '',
         readingTimeMinutes: Math.max(1, Math.ceil(rest.contentHtml.split(/\s+/).length / 200)),
         authorId: reporter.id,
         categoryId: categories[categorySlug],
@@ -122,11 +115,5 @@ async function main() {
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
-    console.error('❌ Seed error:', e);
-    await prisma.$disconnect();
-    process.exit(1);
-  });
+  .then(async () => { await prisma.$disconnect(); })
+  .catch(async (e) => { console.error('❌ Seed error:', e); await prisma.$disconnect(); process.exit(1); });
