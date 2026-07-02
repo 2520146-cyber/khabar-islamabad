@@ -1,0 +1,301 @@
+// ═══════════════════════════════════════════════════════════════════
+// KHABAR ISLAMABAD — Database Schema
+// Prisma ORM with PostgreSQL
+// ═══════════════════════════════════════════════════════════════════
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ────────────────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  EDITOR_IN_CHIEF
+  MANAGING_EDITOR
+  EDITOR
+  REPORTER
+  JOURNALIST
+  GUEST_AUTHOR
+  PHOTOGRAPHER
+  VIDEO_EDITOR
+  AD_MANAGER
+  MODERATOR
+}
+
+enum ArticleStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum Province {
+  FEDERAL
+  PUNJAB
+  SINDH
+  KPK
+  BALOCHISTAN
+  AJK
+  GB
+}
+
+enum MediaType {
+  IMAGE
+  VIDEO
+  AUDIO
+  DOCUMENT
+}
+
+enum AdSlotType {
+  TOP_BANNER
+  HERO
+  SIDEBAR
+  BETWEEN_PARAGRAPHS
+  STICKY_FOOTER
+  NATIVE
+  POPUP
+  VIDEO
+}
+
+enum DeviceType {
+  ALL
+  DESKTOP
+  MOBILE
+}
+
+// ── Models ───────────────────────────────────────────────────────
+
+model User {
+  id                String    @id @default(uuid())
+  name              String
+  email             String    @unique
+  password          String?
+  image             String?
+  role              UserRole  @default(GUEST_AUTHOR)
+  twoFactorEnabled  Boolean   @default(false)
+  twoFactorSecret   String?
+  isActive          Boolean   @default(true)
+  bio               String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  articles          Article[] @relation("AuthorArticles")
+  editedArticles    Article[] @relation("EditorArticles")
+  comments          Comment[]
+  bookmarks         Bookmark[]
+  revisions         Revision[]
+  uploadedMedia     Media[]
+
+  @@index([email])
+  @@index([role])
+  @@map("users")
+}
+
+model Article {
+  id                String        @id @default(uuid())
+  title             String
+  titleUr           String?
+  titleEs           String?
+  titleAr           String?
+  slug              String        @unique
+  subtitle          String?
+  contentJson       Json          @default("{}")
+  contentHtml       String        @default("")
+  contentUr         String?
+  contentEs         String?
+  contentAr         String?
+  heroImageUrl      String?
+  heroImageAlt      String?
+  heroImageCaption  String?
+  status            ArticleStatus @default(DRAFT)
+  location          String?
+  province          Province?
+  readingTimeMinutes Int          @default(3)
+  viewCount         Int           @default(0)
+  shareCount        Int           @default(0)
+  isFeatured        Boolean       @default(false)
+  isBreaking        Boolean       @default(false)
+  aiSummary         String?
+  aiSummaryUr       String?
+  aiKeyTakeaways    Json?
+  aiFaq             Json?
+  metaTitle         String?
+  metaDescription   String?
+  keywords          String[]
+  publishedAt       DateTime?
+  scheduledAt       DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Relations
+  author            User          @relation("AuthorArticles", fields: [authorId], references: [id])
+  authorId          String
+  editor            User?         @relation("EditorArticles", fields: [editorId], references: [id])
+  editorId          String?
+  category          Category      @relation(fields: [categoryId], references: [id])
+  categoryId        String
+  tags              ArticleTag[]
+  comments          Comment[]
+  revisions         Revision[]
+  bookmarks         Bookmark[]
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt(sort: Desc)])
+  @@index([categoryId])
+  @@index([authorId])
+  @@index([isFeatured])
+  @@index([isBreaking])
+  @@map("articles")
+}
+
+model Category {
+  id        String    @id @default(uuid())
+  name      String    @unique
+  nameUr    String?
+  nameEs    String?
+  nameAr    String?
+  slug      String    @unique
+  color     String?
+  icon      String?
+  sortOrder Int       @default(0)
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+
+  articles  Article[]
+
+  @@index([slug])
+  @@index([sortOrder])
+  @@map("categories")
+}
+
+model Tag {
+  id     String       @id @default(uuid())
+  name   String       @unique
+  nameUr String?
+  slug   String       @unique
+
+  articles ArticleTag[]
+
+  @@index([slug])
+  @@map("tags")
+}
+
+model ArticleTag {
+  articleId String
+  tagId     String
+
+  article   Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  tag       Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([articleId, tagId])
+  @@map("article_tags")
+}
+
+model Media {
+  id           String      @id @default(uuid())
+  url          String
+  thumbnailUrl String?
+  type         MediaType   @default(IMAGE)
+  altText      String?
+  caption      String?
+  fileName     String?
+  mimeType     String?
+  width        Int?
+  height       Int?
+  sizeBytes    Int?
+  uploadedById String
+  createdAt    DateTime    @default(now())
+
+  uploadedBy   User        @relation(fields: [uploadedById], references: [id])
+
+  @@index([type])
+  @@index([uploadedById])
+  @@map("media")
+}
+
+model Advertisement {
+  id                 String      @id @default(uuid())
+  name               String
+  slotType           AdSlotType
+  imageUrl           String
+  targetUrl          String
+  device             DeviceType  @default(ALL)
+  startsAt           DateTime?
+  expiresAt          DateTime?
+  isActive           Boolean     @default(true)
+  isPaused           Boolean     @default(false)
+  views              Int         @default(0)
+  clicks             Int         @default(0)
+  assignedCategories Json?
+  createdAt          DateTime    @default(now())
+  updatedAt          DateTime    @updatedAt
+
+  @@index([slotType])
+  @@index([isActive])
+  @@map("advertisements")
+}
+
+model Comment {
+  id         String   @id @default(uuid())
+  body       String
+  isApproved Boolean  @default(false)
+  articleId  String
+  userId     String
+  parentId   String?
+  createdAt  DateTime @default(now())
+
+  article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id])
+  parent     Comment? @relation("CommentReplies", fields: [parentId], references: [id])
+  replies    Comment[] @relation("CommentReplies")
+
+  @@index([articleId])
+  @@index([userId])
+  @@map("comments")
+}
+
+model Revision {
+  id         String   @id @default(uuid())
+  articleId  String
+  authorId   String
+  snapshotJson Json
+  savedAt    DateTime @default(now())
+
+  article    Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  author     User     @relation(fields: [authorId], references: [id])
+
+  @@index([articleId])
+  @@map("revisions")
+}
+
+model Bookmark {
+  userId    String
+  articleId String
+  savedAt   DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, articleId])
+  @@map("bookmarks")
+}
+
+model NewsletterSubscriber {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  isActive    Boolean  @default(true)
+  subscribedAt DateTime @default(now())
+
+  @@index([email])
+  @@map("newsletter_subscribers")
+}
