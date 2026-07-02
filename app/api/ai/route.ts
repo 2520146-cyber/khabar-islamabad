@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/lib/auth';
 import {
   generateSummary,
   generateHeadlines,
@@ -11,26 +10,36 @@ import {
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
     const body = await request.json();
-    const { type, content, title, articleId } = body;
+    const { type, content, title } = body;
 
     if (!type) {
       return NextResponse.json({ error: 'type is required' }, { status: 400 });
     }
 
+    // Digest and summary work without auth (public features)
+    if (type === 'digest') {
+      if (!content) return NextResponse.json({ error: 'content is required' }, { status: 400 });
+      const digest = await generateDigest(title || 'general', content.split('\n'));
+      return NextResponse.json({ digest });
+    }
+
+    if (type === 'summary') {
+      if (!content) return NextResponse.json({ error: 'content is required' }, { status: 400 });
+      const summary = await generateSummary(content);
+      return NextResponse.json({ summary });
+    }
+
+    if (type === 'faq') {
+      if (!content) return NextResponse.json({ error: 'content is required' }, { status: 400 });
+      const faqs = await generateFAQ(content);
+      return NextResponse.json({ faqs });
+    }
+
+    // Other AI features work without auth too (for CMS)
     let result: any;
 
     switch (type) {
-      case 'summary':
-        if (!content) return NextResponse.json({ error: 'content is required' }, { status: 400 });
-        result = { summary: await generateSummary(content) };
-        break;
-
       case 'headlines':
         if (!title || !content) return NextResponse.json({ error: 'title and content are required' }, { status: 400 });
         result = { headlines: await generateHeadlines(title, content) };
@@ -41,19 +50,9 @@ export async function POST(request: NextRequest) {
         result = await generateSEOMeta(title, content);
         break;
 
-      case 'faq':
-        if (!content) return NextResponse.json({ error: 'content is required' }, { status: 400 });
-        result = { faqs: await generateFAQ(content) };
-        break;
-
       case 'rewrite':
         if (!content) return NextResponse.json({ error: 'content is required' }, { status: 400 });
         result = { improved: await rewriteContent(content) };
-        break;
-
-      case 'digest':
-        if (!content) return NextResponse.json({ error: 'content (articles list) is required' }, { status: 400 });
-        result = { digest: await generateDigest(title || 'general', content.split('\n')) };
         break;
 
       default:
