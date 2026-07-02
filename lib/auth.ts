@@ -16,6 +16,7 @@ export const {
   signIn,
   signOut,
 } = NextAuth({
+  secret: process.env.NEXTAUTH_SECRET || 'khabar-islamabad-secret-key-12345',
   adapter: PrismaAdapter(prisma),
   session: { strategy: 'jwt' },
   pages: {
