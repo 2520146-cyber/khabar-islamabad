@@ -4,9 +4,8 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow all public paths without auth check
+  // Public paths — no auth needed
   const publicPrefixes = [
-    '/',
     '/login',
     '/api/auth',
     '/api/articles',
@@ -15,6 +14,8 @@ export function middleware(request: NextRequest) {
     '/api/newsletter',
     '/api/weather',
     '/api/prayer-times',
+    '/api/ai',
+    '/api/translate',
     '/timeline',
     '/archive',
     '/search',
@@ -31,18 +32,24 @@ export function middleware(request: NextRequest) {
     '/videos',
     '/podcasts',
     '/photo-stories',
+    '/reporter',
   ];
 
-  // Check if path is public (exact match or starts with prefix + '/')
-  const isPublic = pathname === '/' || publicPrefixes.some(
-    (path) => path !== '/' && (pathname === path || pathname.startsWith(path + '/'))
+  // Homepage is public
+  if (pathname === '/') {
+    return NextResponse.next();
+  }
+
+  // Check if path is public
+  const isPublic = publicPrefixes.some(
+    (path) => pathname === path || pathname.startsWith(path + '/')
   );
 
   if (isPublic) {
     return NextResponse.next();
   }
 
-  // For protected routes, check for session token cookie
+  // For protected routes, check session cookie
   const sessionToken = request.cookies.get('authjs.session-token')?.value ||
                        request.cookies.get('__Secure-authjs.session-token')?.value;
 
@@ -59,8 +66,6 @@ export const config = {
   matcher: [
     '/cms/:path*',
     '/admin/:path*',
-    '/api/ai/:path*',
     '/api/bookmarks/:path*',
-    '/api/translate/:path*',
   ],
 };
